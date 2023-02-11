@@ -23,7 +23,7 @@ namespace Orleans.Streams.Kafka.Core
 	{
 		private readonly string _name;
 		private readonly KafkaStreamOptions _options;
-		private readonly SerializationManager _serializationManager;
+		private readonly Serializer<KafkaBatchContainer> _serializer;
 		private readonly ILoggerFactory _loggerFactory;
 		private readonly IGrainFactory _grainFactory;
 		private readonly IExternalStreamDeserializer _externalDeserializer;
@@ -38,10 +38,10 @@ namespace Orleans.Streams.Kafka.Core
 			string name,
 			KafkaStreamOptions options,
 			SimpleQueueCacheOptions cacheOptions,
-			SerializationManager serializationManager,
+			Serializer serializer,
 			ILoggerFactory loggerFactory,
 			IGrainFactory grainFactory
-		) : this(name, options, cacheOptions, serializationManager, loggerFactory, grainFactory, null)
+		) : this(name, options, cacheOptions, serializer, loggerFactory, grainFactory, null)
 		{
 			if (options.Topics.Any(topic => topic.IsExternal))
 				throw new InvalidOperationException(
@@ -53,7 +53,7 @@ namespace Orleans.Streams.Kafka.Core
 			string name,
 			KafkaStreamOptions options,
 			SimpleQueueCacheOptions cacheOptions,
-			SerializationManager serializationManager,
+			Serializer serializer,
 			ILoggerFactory loggerFactory,
 			IGrainFactory grainFactory,
 			IExternalStreamDeserializer externalDeserializer
@@ -62,7 +62,7 @@ namespace Orleans.Streams.Kafka.Core
 			_options = options ?? throw new ArgumentNullException(nameof(options));
 
 			_name = name;
-			_serializationManager = serializationManager;
+			_serializer = serializer.GetSerializer<KafkaBatchContainer>();
 			_loggerFactory = loggerFactory;
 			_grainFactory = grainFactory;
 			_externalDeserializer = externalDeserializer;
@@ -89,7 +89,7 @@ namespace Orleans.Streams.Kafka.Core
 				_name,
 				_options,
 				_queueProperties,
-				_serializationManager,
+				_serializer,
 				_loggerFactory,
 				_grainFactory,
 				_externalDeserializer

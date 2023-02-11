@@ -94,16 +94,12 @@ namespace Orleans.Streams.Kafka.E2E.Tests
 					options.ConsumeMode = ConsumeMode.StreamEnd;
 				})
 				.AddAvro("https://[host name]/schema-registry")
-				.Build()
-				.ConfigureApplicationParts(parts =>
-					parts.AddApplicationPart(typeof(RoundTripGrain).Assembly).WithReferences())
-				;
-
+				.Build();
 	}
 
-	public class AvroSiloBuilderConfigurator : ISiloBuilderConfigurator
+	public class AvroSiloBuilderConfigurator : ISiloConfigurator
 	{
-		public void Configure(ISiloHostBuilder hostBuilder)
+		public void Configure(ISiloBuilder hostBuilder)
 			=> hostBuilder
 				.AddMemoryGrainStorage("PubSubStore")
 				.AddKafka(Consts.KafkaStreamProvider)
@@ -121,8 +117,6 @@ namespace Orleans.Streams.Kafka.E2E.Tests
 				})
 				.AddAvro("https://[host name]/schema-registry")
 				.AddLoggingTracker()
-				.Build()
-				.ConfigureApplicationParts(parts =>
-					parts.AddApplicationPart(typeof(RoundTripGrain).Assembly).WithReferences());
+				.Build();
 	}
 }

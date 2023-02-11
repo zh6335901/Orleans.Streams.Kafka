@@ -1,5 +1,6 @@
 ﻿using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
+using Orleans.Runtime;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
 using Orleans.Streams.Kafka.Producer;
@@ -17,7 +18,7 @@ namespace Orleans.Streams.Kafka.Core
 	{
 		private readonly KafkaStreamOptions _options;
 		private readonly IDictionary<string, QueueProperties> _queueProperties;
-		private readonly SerializationManager _serializationManager;
+		private readonly Serializer<KafkaBatchContainer> _serializer;
 		private readonly ILoggerFactory _loggerFactory;
 		private readonly IGrainFactory _grainFactory;
 		private readonly IExternalStreamDeserializer _externalDeserializer;
@@ -32,7 +33,7 @@ namespace Orleans.Streams.Kafka.Core
 			string providerName,
 			KafkaStreamOptions options,
 			IDictionary<string, QueueProperties> queueProperties,
-			SerializationManager serializationManager,
+			Serializer<KafkaBatchContainer> serializer,
 			ILoggerFactory loggerFactory,
 			IGrainFactory grainFactory,
 			IExternalStreamDeserializer externalDeserializer
@@ -40,7 +41,7 @@ namespace Orleans.Streams.Kafka.Core
 		{
 			_options = options;
 			_queueProperties = queueProperties;
-			_serializationManager = serializationManager;
+			_serializer = serializer;
 			_loggerFactory = loggerFactory;
 			_grainFactory = grainFactory;
 			_externalDeserializer = externalDeserializer;
@@ -49,13 +50,12 @@ namespace Orleans.Streams.Kafka.Core
 			Name = providerName;
 
 			_producer = new ProducerBuilder<byte[], KafkaBatchContainer>(options.ToProducerProperties())
-				.SetValueSerializer(new KafkaBatchContainerSerializer(serializationManager))
+				.SetValueSerializer(new ConfluentKafkaBatchContainerSerializer(serializer))
 				.Build();
 		}
 
 		public async Task QueueMessageBatchAsync<T>(
-			Guid streamGuid,
-			string streamNamespace,
+			StreamId streamId,
 			IEnumerable<T> events,
 			StreamSequenceToken token,
 			Dictionary<string, object> requestContext
@@ -68,8 +68,7 @@ namespace Orleans.Streams.Kafka.Core
 					return;
 
 				var batch = new KafkaBatchContainer(
-					streamGuid,
-					streamNamespace,
+					streamId,
 					eventList,
 					_options.ImportRequestContext ? requestContext : null
 				);
@@ -79,9 +78,9 @@ namespace Orleans.Streams.Kafka.Core
 			catch (Exception ex)
 			{
 				_logger.LogError(
-					ex, "Failed to publish message: streamNamespace: {namespace}, streamGuid: {guid}",
-					streamNamespace,
-					streamGuid.ToString()
+					ex, "Failed to publish message: streamNamespace: {namespace}, streamKey: {key}",
+					streamId.GetNamespace(),
+					streamId.GetKeyAsString()
 				);
 
 				throw;
@@ -93,7 +92,7 @@ namespace Orleans.Streams.Kafka.Core
 				Name,
 				_queueProperties[queueId.GetStringNamePrefix()],
 				_options,
-				_serializationManager,
+				_serializer,
 				_loggerFactory,
 				_grainFactory,
 				_externalDeserializer
@@ -103,6 +102,8 @@ namespace Orleans.Streams.Kafka.Core
 		{
 			_producer.Flush(TimeSpan.FromSeconds(2));
 			_producer.Dispose();
+
+			GC.SuppressFinalize(this);
 		}
 	}
 }

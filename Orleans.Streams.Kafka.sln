@@ -1,11 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29009.5
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33122.133
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Orleans.Streams.Kafka", "Orleans.Streams.Kafka\Orleans.Streams.Kafka.csproj", "{2A22B25B-D199-47AE-A7AE-8A86E0F8204D}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Orleans.Streams.Utils", "..\Orleans.Streams.Utils\Orleans.Streams.Utils\Orleans.Streams.Utils.csproj", "{F6929C30-536B-45C2-941C-265F5A261783}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{5366C489-8D00-4047-8BA8-348643ED8ADA}"
 EndProject
@@ -37,6 +35,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Confluent.SchemaRegistry", 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ExternalLibs", "ExternalLibs", "{9EAD4F35-64E1-40E8-94FE-5B0A47B67965}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Orleans.Streams.Utils", "Orleans.Streams.Utils\Orleans.Streams.Utils.csproj", "{4B21BA84-9CBA-43CC-9F40-E5A913C73B87}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,10 +47,6 @@ Global
 		{2A22B25B-D199-47AE-A7AE-8A86E0F8204D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2A22B25B-D199-47AE-A7AE-8A86E0F8204D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2A22B25B-D199-47AE-A7AE-8A86E0F8204D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F6929C30-536B-45C2-941C-265F5A261783}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F6929C30-536B-45C2-941C-265F5A261783}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F6929C30-536B-45C2-941C-265F5A261783}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F6929C30-536B-45C2-941C-265F5A261783}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B775524A-E0B5-4F7A-AC05-11D1B2734CBB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B775524A-E0B5-4F7A-AC05-11D1B2734CBB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B775524A-E0B5-4F7A-AC05-11D1B2734CBB}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -79,6 +75,10 @@ Global
 		{27D85933-F1D6-4CDA-8EF5-FD1A613DBB30}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{27D85933-F1D6-4CDA-8EF5-FD1A613DBB30}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{27D85933-F1D6-4CDA-8EF5-FD1A613DBB30}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4B21BA84-9CBA-43CC-9F40-E5A913C73B87}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4B21BA84-9CBA-43CC-9F40-E5A913C73B87}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4B21BA84-9CBA-43CC-9F40-E5A913C73B87}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4B21BA84-9CBA-43CC-9F40-E5A913C73B87}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

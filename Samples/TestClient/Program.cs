@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
@@ -7,22 +9,22 @@ using Orleans.Streams;
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using TestGrains;
 
 namespace TestClient
 {
-	internal class Program
+	internal static class Program
 	{
 		private static async Task Main(string[] args)
 		{
 			Console.Title = "Client";
 
-			var clientTask = StartClientWithRetries();
+			using IHost host = GetOrleansClientHost();
+			await host.StartAsync();
 
-			var clusterClient = await clientTask;
+			var clusterClient = host.Services.GetRequiredService<IClusterClient>();
 
 			var grainId = "PLAYER-5a98c80e-26b8-4d1c-a5da-cb64237f2392";
 			var testGrain = clusterClient.GetGrain<ITestGrain>(grainId);
@@ -43,16 +45,15 @@ namespace TestClient
 					Greeting = line
 				});
 			}
+
 			Console.ReadKey();
 		}
 
-		private static async Task<IClusterClient> StartClientWithRetries(int initializeAttemptsBeforeFailing = 25)
+		private static IHost GetOrleansClientHost()
 		{
-			var attempt = 0;
-			IClusterClient client;
-			while (true)
-			{
-				try
+			var host = new HostBuilder()
+				.ConfigureLogging(loggingBuilder => loggingBuilder.AddConsole())
+				.UseOrleansClient(clientBuilder =>
 				{
 					var siloAddress = IPAddress.Loopback;
 					var gatewayPort = 30000;
@@ -64,15 +65,14 @@ namespace TestClient
 						"[host name]:39002"
 					};
 
-					client = new ClientBuilder()
+					clientBuilder
 						.Configure<ClusterOptions>(options =>
 						{
 							options.ClusterId = "TestCluster";
 							options.ServiceId = "123";
 						})
+						.UseConnectionRetryFilter<ClientConnectRetryFilter>()
 						.UseStaticClustering(options => options.Gateways.Add((new IPEndPoint(siloAddress, gatewayPort)).ToGatewayUri()))
-						.ConfigureApplicationParts(parts => parts.AddApplicationPart(Assembly.Load("TestGrains")).WithReferences())
-						.ConfigureLogging(logging => logging.AddConsole())
 						.AddKafka("KafkaProvider")
 						.WithOptions(options =>
 						{
@@ -80,28 +80,43 @@ namespace TestClient
 							options.ConsumerGroupId = "TestGroup";
 							options.AddTopic("sucrose-test");
 						})
-						.Build()
 						.Build();
+				})
+				.Build();
 
-					await client.Connect();
+			return host;
+		}
 
-					Console.WriteLine("Client successfully connect to silo host");
-					break;
-				}
-				catch (SiloUnavailableException)
+		internal sealed class ClientConnectRetryFilter : IClientConnectionRetryFilter
+		{
+			private int _retryCount = 0;
+			private const int _maxRetry = 25;
+			private const int _delay = 3_000;
+
+			public async Task<bool> ShouldRetryConnectionAttempt(
+				Exception exception,
+				CancellationToken cancellationToken)
+			{
+				if (_retryCount >= _maxRetry)
 				{
-					attempt++;
-					Console.WriteLine(
-						$"Attempt {attempt} of {initializeAttemptsBeforeFailing} failed to initialize the Orleans client.");
-					if (attempt > initializeAttemptsBeforeFailing)
-					{
-						throw;
-					}
-					Thread.Sleep(TimeSpan.FromSeconds(3));
+					return false;
 				}
-			}
 
-			return client;
+				if (!cancellationToken.IsCancellationRequested &&
+					exception is SiloUnavailableException siloUnavailableException)
+				{
+					_retryCount++;
+
+					Console.WriteLine(
+						$"Attempt {_retryCount} of {_maxRetry} failed to initialize the Orleans client.");
+
+					await Task.Delay(_delay, cancellationToken);
+
+					return true;
+				}
+
+				return false;
+			}
 		}
 	}
 }

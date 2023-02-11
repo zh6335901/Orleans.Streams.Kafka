@@ -9,10 +9,10 @@ namespace Orleans.Streams.Kafka.Producer
 	{
 		public static Task Produce(this IProducer<byte[], KafkaBatchContainer> producer, KafkaBatchContainer batch)
 			=> Task.Run(() => producer.ProduceAsync(
-				batch.StreamNamespace,
+				batch.StreamId.GetNamespace(),
 				new Message<byte[], KafkaBatchContainer>
 				{
-					Key = batch.StreamGuid.ToByteArray(),
+					Key = batch.StreamId.Key.ToArray(),
 					Value = batch,
 					Timestamp = new Timestamp(DateTimeOffset.UtcNow)
 				}
