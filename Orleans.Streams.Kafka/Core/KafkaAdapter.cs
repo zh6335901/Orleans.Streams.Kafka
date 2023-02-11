@@ -1,5 +1,6 @@
 ﻿using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
+using Orleans.Providers.Streams.Common;
 using Orleans.Runtime;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
@@ -70,7 +71,8 @@ namespace Orleans.Streams.Kafka.Core
 				var batch = new KafkaBatchContainer(
 					streamId,
 					eventList,
-					_options.ImportRequestContext ? requestContext : null
+					_options.ImportRequestContext ? requestContext : null,
+					token as EventSequenceTokenV2
 				);
 
 				await _producer.Produce(batch);

@@ -12,9 +12,11 @@ namespace Orleans.Streams.Kafka.Core
 	[GenerateSerializer]
 	public class KafkaBatchContainer : IBatchContainer, IComparable<KafkaBatchContainer>
 	{
+		[JsonProperty("sequenceToken")]
 		[Id(0)]
 		private EventSequenceTokenV2 _sequenceToken;
 
+		[JsonProperty("requestContext")]
 		[Id(1)]
 		private readonly Dictionary<string, object> _requestContext;
 
@@ -22,23 +24,26 @@ namespace Orleans.Streams.Kafka.Core
 
 		public StreamSequenceToken SequenceToken => _sequenceToken;
 
-		internal EventSequenceTokenV2 RealSequenceToken 
+		internal EventSequenceTokenV2 RealSequenceToken
 		{ 
-			get => _sequenceToken; 
-			set => _sequenceToken = value; 
+			get => _sequenceToken;
+			set => _sequenceToken = value;
 		}
 
+		[JsonProperty]
 		[Id(2)]
 		protected List<object> Events { get; set; }
 
 		[Id(3)]
 		public StreamId StreamId { get; }
 
+		[JsonConstructor]
 		public KafkaBatchContainer(
 			StreamId streamId,
 			List<object> events,
-			Dictionary<string, object> requestContext
-		) : this(streamId, events, requestContext, null, null)
+			Dictionary<string, object> requestContext,
+			EventSequenceTokenV2 sequenceToken
+		) : this(streamId, events, requestContext, sequenceToken, null)
 		{
 		}
 
