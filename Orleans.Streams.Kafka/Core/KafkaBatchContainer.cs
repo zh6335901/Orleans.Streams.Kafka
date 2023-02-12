@@ -90,6 +90,6 @@ namespace Orleans.Streams.Kafka.Core
 			=> TopicPartitionOffSet.Offset.Value.CompareTo(other.TopicPartitionOffSet.Offset.Value);
 
 		public override string ToString()
-			=> $"[{GetType().Name}:Stream={StreamId},#Items={Events.Count}]";
+			=> $"[{GetType().Name}:Stream={StreamId},#Items={Events.Count},TopicPartitionOffset={TopicPartitionOffSet}]";
 	}
 }
