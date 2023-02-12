@@ -35,7 +35,7 @@ namespace TestClient
 			Console.WriteLine(result);
 
 			var streamProvider = clusterClient.GetStreamProvider("KafkaProvider");
-			var stream = streamProvider.GetStream<TestModel>("streamId", "sucrose-test");
+			var stream = streamProvider.GetStream<TestModel>("sucrose-test", "streamId");
 
 			string line;
 			while ((line = Console.ReadLine()) != string.Empty)
@@ -47,6 +47,8 @@ namespace TestClient
 			}
 
 			Console.ReadKey();
+
+			await host.StopAsync();
 		}
 
 		private static IHost GetOrleansClientHost()
@@ -60,9 +62,7 @@ namespace TestClient
 
 					var brokers = new List<string>
 					{
-						"[host name]:39000",
-						"[host name]:39001",
-						"[host name]:39002"
+						"127.0.0.1:9093"
 					};
 
 					clientBuilder

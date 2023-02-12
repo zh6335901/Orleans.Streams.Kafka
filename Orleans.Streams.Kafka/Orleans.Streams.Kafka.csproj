@@ -7,14 +7,14 @@
   </PropertyGroup>
   <!-- vendor packages -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsVersion)" />
     <PackageReference Include="Confluent.Kafka" Version="$(ConfluentKafkaVersion)" />
     <PackageReference Include="Confluent.SchemaRegistry.Serdes" Version="1.3.0" />
-    <PackageReference Include="Microsoft.Orleans.Streaming" Version="7.1.0" />
-  </ItemGroup>
-  <!-- packages -->
-  <ItemGroup Condition="'$(Configuration)' == 'Release'">
-    <PackageReference Include="Orleans.Streams.Utils" Version="$(StreamUtilsVersion)" />
+    <PackageReference Include="Microsoft.Orleans.CodeGenerator" Version="$(OrleansVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Orleans.Streaming" Version="$(OrleansVersion)" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Orleans.Streams.Utils\Orleans.Streams.Utils.csproj" />

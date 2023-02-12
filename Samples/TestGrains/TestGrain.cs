@@ -19,7 +19,7 @@ namespace TestGrains
 		public override async Task OnActivateAsync(CancellationToken ct)
 		{
 			var kafkaProvider = this.GetStreamProvider("KafkaProvider");
-			var testStream = kafkaProvider.GetStream<TestModel>("sucrose-test", "streamId"); // todo: use stream utils
+			var testStream = kafkaProvider.GetStream<TestModel>("sucrose-test", "streamId");
 
 			// To resume stream in case of stream deactivation
 			var subscriptionHandles = await testStream.GetAllSubscriptionHandles();

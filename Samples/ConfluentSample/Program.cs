@@ -14,11 +14,7 @@ namespace ConfluentSample
 	internal class Program
 	{
 		private static List<string> Brokers = new List<string>
-		{
-			"[host name]:39000",
-			"[host name]:39001",
-			"[host name]:39002"
-		};
+		{ "127.0.0.1:9093" };
 
 		private const string Topic = "sucrose-external";
 		private const string RegistryUrl = "https://[host name]/schema-registry";

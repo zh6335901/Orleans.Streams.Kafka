@@ -78,10 +78,9 @@ namespace Orleans.Streams.Kafka.Core
 				loggerFactory
 			);
 
+			_config = _options.ToAdminProperties();
 			_queueProperties = GetQueuesProperties().ToDictionary(q => q.QueueName);
 			_streamQueueMapper = new ExternalQueueMapper(_queueProperties.Values);
-
-			_config = _options.ToAdminProperties();
 		}
 
 		public Task<IQueueAdapter> CreateAdapter()
@@ -134,6 +133,7 @@ namespace Orleans.Streams.Kafka.Core
 		{
 			try
 			{
+				
 				using var admin = _adminConfig.Build();
 				var meta = admin.GetMetadata(_options.AdminRequestTimeout);
 				var currentMetaTopics = meta.Topics.ToList();
