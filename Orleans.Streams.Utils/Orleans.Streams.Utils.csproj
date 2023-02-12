@@ -3,6 +3,10 @@
     <TargetFramework>net7.0</TargetFramework>
     <Description>Streaming utilities for Microsoft Orleans.</Description>
     <PackageTags>orleans utilities streams providers streamprovider</PackageTags>
+    <PackageId>Orleans.Streams.Utils.V7</PackageId>
+    <Version>7.1.0</Version>
+    <Authors>Jeffrey Zhang</Authors>
+    <Company />
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Orleans.Sdk" Version="$(OrleansVersion)" />

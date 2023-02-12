@@ -4,6 +4,10 @@
     <Description>Orleans streaming provider for Kafka.</Description>
     <PackageTags>orleans kafka streams providers streamprovider confluent</PackageTags>
     <LangVersion>10</LangVersion>
+    <PackageId>Orleans.Streams.Kafka.V7</PackageId>
+    <Version>7.1.0</Version>
+    <Authors>Jeffrey Zhang</Authors>
+    <Company />
   </PropertyGroup>
   <!-- vendor packages -->
   <ItemGroup>
