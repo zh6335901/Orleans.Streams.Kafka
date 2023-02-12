@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Orleans.Configuration;
 using Orleans.Runtime;
+using Orleans.Streams;
 using Orleans.Streams.Kafka.Config;
 using Orleans.Streams.Kafka.Core;
 using Orleans.Streams.Kafka.Serialization;
@@ -60,12 +61,14 @@ namespace Orleans.Hosting
 		public static ISiloBuilder AddKafkaStreamProvider(
 			this ISiloBuilder builder,
 			string providerName,
+			StreamPubSubType streamPubSubType,
 			Action<KafkaStreamOptions> configureOptions
-		) => AddSiloProvider(builder, providerName, opt => opt.Configure(configureOptions));
+		) => AddSiloProvider(builder, providerName, streamPubSubType, opt => opt.Configure(configureOptions));
 
 		private static ISiloBuilder AddSiloProvider(
 			this ISiloBuilder builder,
 			string providerName,
+			StreamPubSubType streamPubSubType,
 			Action<OptionsBuilder<KafkaStreamOptions>> configureOptions = null
 		)
 		{
@@ -77,7 +80,11 @@ namespace Orleans.Hosting
 						.ConfigureNamedOptionForLogging<HashRingStreamQueueMapperOptions>(providerName);
 				})
 				.AddPersistentStreams(providerName, KafkaAdapterFactory.Create,
-					stream => stream.Configure(configureOptions))
+					stream =>
+					{
+						stream.ConfigureStreamPubSub(streamPubSubType);
+						stream.Configure(configureOptions);
+					})
 				.Configure<SimpleQueueCacheOptions>(options => options.CacheSize = DefaultCacheSize);
 
 			return builder;

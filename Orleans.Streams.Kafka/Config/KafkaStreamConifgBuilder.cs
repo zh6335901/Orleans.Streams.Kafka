@@ -12,10 +12,18 @@ namespace Orleans.Streams.Kafka.Config
 		private readonly string _providerName;
 		private Action<KafkaStreamOptions> _configure;
 
+		private StreamPubSubType _streamPubSubType = StreamPubSubType.ExplicitGrainBasedAndImplicit;
+
 		public KafkaStreamSiloBuilder(ISiloBuilder hostBuilder, string providerName)
 		{
 			_hostBuilder = hostBuilder;
 			_providerName = providerName;
+		}
+
+		public KafkaStreamSiloBuilder ConfigureStreamPubSubType(StreamPubSubType streamPubSubType)
+		{
+			_streamPubSubType = streamPubSubType;
+			return this;
 		}
 
 		public KafkaStreamSiloBuilder WithOptions(Action<KafkaStreamOptions> configure)
@@ -79,6 +87,7 @@ namespace Orleans.Streams.Kafka.Config
 		{
 			_hostBuilder.AddKafkaStreamProvider(
 				_providerName,
+				_streamPubSubType,
 				options => _configure?.Invoke(options)
 			);
 
