@@ -18,6 +18,7 @@ namespace Orleans.Streams.Kafka.Config
 
 			config.GroupId = options.ConsumerGroupId;
 			config.EnableAutoCommit = false;
+			config.EnableAutoOffsetStore = false;
 
 			return config;
 		}

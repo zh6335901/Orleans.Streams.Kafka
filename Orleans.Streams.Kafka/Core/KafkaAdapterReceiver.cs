@@ -24,10 +24,15 @@ namespace Orleans.Streams.Kafka.Core
 		private readonly IGrainFactory _grainFactory;
 		private readonly IExternalStreamDeserializer _externalDeserializer;
 		private readonly QueueProperties _queueProperties;
+		private readonly TopicPartition _topicPartition;
+		private readonly SemaphoreSlim _consumerLock = new SemaphoreSlim(1, 1);
+		private readonly SortedSet<long> _deliveredOffsets = new SortedSet<long>();
 
 		private IConsumer<byte[], byte[]> _consumer;
 		private Task _commitPromise = Task.CompletedTask;
 		private Task<IList<IBatchContainer>> _consumePromise;
+		private long? _nextCommitOffset;
+		private bool _shutdownRequested;
 
 		public KafkaAdapterReceiver(
 			string providerName,
@@ -46,6 +51,7 @@ namespace Orleans.Streams.Kafka.Core
 			_serializer = serializer;
 			_grainFactory = grainFactory;
 			_externalDeserializer = externalDeserializer;
+			_topicPartition = new TopicPartition(_queueProperties.Namespace, (int)_queueProperties.PartitionId);
 			_logger = loggerFactory.CreateLogger<KafkaAdapterReceiver>();
 		}
 
@@ -75,7 +81,7 @@ namespace Orleans.Streams.Kafka.Core
 					break;
 			}
 
-			_consumer.Assign(new TopicPartitionOffset(_queueProperties.Namespace, (int)_queueProperties.PartitionId, offsetMode));
+			_consumer.Assign(new TopicPartitionOffset(_topicPartition, offsetMode));
 
 			return Task.CompletedTask;
 		}
@@ -103,29 +109,17 @@ namespace Orleans.Streams.Kafka.Core
 
 		public async Task MessagesDeliveredAsync(IList<IBatchContainer> messages)
 		{
-			KafkaBatchContainer batchWithHighestOffset = null;
+			if (_shutdownRequested || messages == null || !messages.Any())
+				return;
 
-			try
-			{
-				if (!messages.Any())
-					return;
-
-				batchWithHighestOffset = messages
-					.Cast<KafkaBatchContainer>()
-					.Max();
-
-				_commitPromise = _consumer.Commit(batchWithHighestOffset);
-				await _commitPromise;
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "Failed to commit message offset: {@offset}", batchWithHighestOffset?.TopicPartitionOffSet);
-				throw;
-			}
+			_commitPromise = CommitDeliveredOffsetsAsync(messages);
+			await _commitPromise;
 		}
 
 		public async Task Shutdown(TimeSpan timeout)
 		{
+			_shutdownRequested = true;
+
 			try
 			{
 				var tasks = new List<Task>();
@@ -140,10 +134,25 @@ namespace Orleans.Streams.Kafka.Core
 			}
 			finally
 			{
-				_consumer.Unassign();
-				_consumer.Unsubscribe();
-				_consumer.Close();
-				_consumer = null;
+				await _consumerLock.WaitAsync();
+
+				try
+				{
+					var consumerRef = _consumer;
+					if (consumerRef != null)
+					{
+						consumerRef.Unassign();
+						consumerRef.Unsubscribe();
+						consumerRef.Close();
+						consumerRef.Dispose();
+						_consumer = null;
+						_deliveredOffsets.Clear();
+					}
+				}
+				finally
+				{
+					_consumerLock.Release();
+				}
 			}
 		}
 
@@ -154,7 +163,23 @@ namespace Orleans.Streams.Kafka.Core
 				var batches = new List<IBatchContainer>();
 				for (var i = 0; i < maxCount && !cancellation.IsCancellationRequested; i++)
 				{
-					var consumeResult = _consumer.Consume(_options.PollTimeout);
+					ConsumeResult<byte[], byte[]> consumeResult = null;
+
+					await _consumerLock.WaitAsync(cancellation.Token);
+					try
+					{
+						if (_shutdownRequested || _consumer == null)
+							break;
+
+						consumeResult = _consumer.Consume(_options.PollTimeout);
+						if (consumeResult != null && !_nextCommitOffset.HasValue)
+							_nextCommitOffset = consumeResult.Offset.Value;
+					}
+					finally
+					{
+						_consumerLock.Release();
+					}
+
 					if (consumeResult == null)
 						break;
 
@@ -196,6 +221,75 @@ namespace Orleans.Streams.Kafka.Core
 
 			var trackingGrain = _grainFactory.GetMessageTrackerGrain(_providerName, _queueProperties.QueueName);
 			return trackingGrain.Track(new Immutable<IBatchContainer>(container));
+		}
+
+		private async Task CommitDeliveredOffsetsAsync(IList<IBatchContainer> messages)
+		{
+			var deliveredOffsets = messages
+				.OfType<KafkaBatchContainer>()
+				.Select(batch => batch.TopicPartitionOffSet.Offset.Value)
+				.OrderBy(offset => offset)
+				.ToList();
+
+			if (deliveredOffsets.Count == 0)
+				return;
+
+			var lockTaken = false;
+			try
+			{
+				await _consumerLock.WaitAsync();
+				lockTaken = true;
+
+				if (_shutdownRequested || _consumer == null)
+					return;
+
+				_nextCommitOffset ??= deliveredOffsets[0];
+				foreach (var offset in deliveredOffsets)
+				{
+					if (offset >= _nextCommitOffset.Value)
+						_deliveredOffsets.Add(offset);
+				}
+
+				if (_deliveredOffsets.Count == 0)
+					return;
+
+				var initialNextOffset = _nextCommitOffset.Value;
+				var nextOffsetToCommit = initialNextOffset;
+
+				while (_deliveredOffsets.Remove(nextOffsetToCommit))
+					nextOffsetToCommit++;
+
+				if (nextOffsetToCommit > initialNextOffset)
+				{
+					_consumer.Commit(new[] { new TopicPartitionOffset(_topicPartition, new Offset(nextOffsetToCommit)) });
+					_nextCommitOffset = nextOffsetToCommit;
+					return;
+				}
+
+				var firstPendingDeliveredOffset = _deliveredOffsets.Min;
+				if (firstPendingDeliveredOffset > initialNextOffset)
+				{
+					_logger.LogWarning(
+						"Detected non-contiguous delivered offsets. Seeking back to retry from offset {offset}. queueId: {@queueProperties}",
+						initialNextOffset,
+						_queueProperties
+					);
+
+					_consumer.Seek(new TopicPartitionOffset(_topicPartition, new Offset(initialNextOffset)));
+					_deliveredOffsets.Clear();
+				}
+			}
+			catch (Exception ex)
+			{
+				var lastDeliveredOffset = deliveredOffsets.Count == 0 ? (long?)null : deliveredOffsets[^1];
+				_logger.LogError(ex, "Failed to commit message offset: {offset}", lastDeliveredOffset);
+				throw;
+			}
+			finally
+			{
+				if (lockTaken)
+					_consumerLock.Release();
+			}
 		}
 	}
 }
